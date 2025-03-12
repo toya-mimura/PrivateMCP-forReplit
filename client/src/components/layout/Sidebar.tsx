@@ -69,7 +69,7 @@ export default function Sidebar({
       <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
         {navItems.map((item) => (
           <Link key={item.path} href={item.path} onClick={handleNavClick}>
-            <a 
+            <div 
               className={`flex items-center space-x-3 px-4 py-3 rounded-lg transition-colors ${
                 isActive(item.path)
                   ? "text-primary bg-blue-50 dark:bg-slate-700"
@@ -78,7 +78,7 @@ export default function Sidebar({
             >
               {item.icon}
               <span>{item.label}</span>
-            </a>
+            </div>
           </Link>
         ))}
       </nav>
