@@ -44,15 +44,15 @@ export async function validateToken(token: string): Promise<AccessToken | null> 
 async function initializeAdminUser() {
   try {
     // Check if admin user exists
-    const adminUser = await storage.getUserByUsername("admin");
+    const adminUser = await storage.getUserByUsername(process.env.ADMIN_USERNAME || "admin");
     
     if (!adminUser) {
-      // Create admin user with strong password
-      // You should change this password after deployment
-      const adminPassword = "Admin@MCP2023"; 
+      // Create admin user with credentials from Replit Secrets
+      const adminUsername = process.env.ADMIN_USERNAME || "admin";
+      const adminPassword = process.env.ADMIN_PASSWORD || "Admin@MCP2023"; 
       
       await storage.createUser({
-        username: "admin",
+        username: adminUsername,
         password: await hashPassword(adminPassword),
       });
       
