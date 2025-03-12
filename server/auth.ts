@@ -40,7 +40,35 @@ export async function validateToken(token: string): Promise<AccessToken | null> 
   return accessToken;
 }
 
+// Create admin user on startup if it doesn't exist
+async function initializeAdminUser() {
+  try {
+    // Check if admin user exists
+    const adminUser = await storage.getUserByUsername("admin");
+    
+    if (!adminUser) {
+      // Create admin user with strong password
+      // You should change this password after deployment
+      const adminPassword = "Admin@MCP2023"; 
+      
+      await storage.createUser({
+        username: "admin",
+        password: await hashPassword(adminPassword),
+      });
+      
+      console.log("Admin user created successfully");
+    } else {
+      console.log("Admin user already exists");
+    }
+  } catch (error) {
+    console.error("Failed to initialize admin user:", error);
+  }
+}
+
 export function setupAuth(app: Express) {
+  // Initialize admin user on startup
+  initializeAdminUser();
+  
   const sessionSettings: session.SessionOptions = {
     secret: process.env.SESSION_SECRET || "mcp-server-secret-key",
     resave: false,
@@ -83,29 +111,9 @@ export function setupAuth(app: Express) {
     }
   });
 
-  // Register route
-  app.post("/api/register", async (req, res, next) => {
-    try {
-      const existingUser = await storage.getUserByUsername(req.body.username);
-      if (existingUser) {
-        return res.status(400).json({ message: "Username already exists" });
-      }
-
-      const user = await storage.createUser({
-        ...req.body,
-        password: await hashPassword(req.body.password),
-      });
-
-      req.login(user, (err) => {
-        if (err) return next(err);
-        
-        // Return user data without password
-        const { password, ...userData } = user;
-        res.status(201).json(userData);
-      });
-    } catch (error) {
-      next(error);
-    }
+  // Register route - DISABLED, returns 403 Forbidden
+  app.post("/api/register", async (req, res) => {
+    return res.status(403).json({ message: "Registration is disabled on this server" });
   });
 
   // Login route

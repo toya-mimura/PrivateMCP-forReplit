@@ -5,7 +5,7 @@ import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { useAuth } from "@/hooks/use-auth";
 import { insertUserSchema } from "@shared/schema";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
@@ -18,22 +18,13 @@ const loginSchema = z.object({
   password: z.string().min(6, "Password must be at least 6 characters"),
 });
 
-const registerSchema = insertUserSchema.extend({
-  username: z.string().min(3, "Username must be at least 3 characters"),
-  password: z.string().min(6, "Password must be at least 6 characters"),
-  confirmPassword: z.string().min(6, "Password must be at least 6 characters"),
-}).refine(data => data.password === data.confirmPassword, {
-  message: "Passwords do not match",
-  path: ["confirmPassword"],
-});
 
 type LoginFormValues = z.infer<typeof loginSchema>;
-type RegisterFormValues = z.infer<typeof registerSchema>;
 
 export default function AuthPage() {
   const [activeTab, setActiveTab] = useState<string>("login");
   const [location, navigate] = useLocation();
-  const { user, loginMutation, registerMutation } = useAuth();
+  const { user, loginMutation } = useAuth();
 
   // Redirect if already logged in
   // Using useEffect to avoid setState during render
@@ -52,26 +43,9 @@ export default function AuthPage() {
     },
   });
 
-  // Register form
-  const registerForm = useForm<RegisterFormValues>({
-    resolver: zodResolver(registerSchema),
-    defaultValues: {
-      username: "",
-      password: "",
-      confirmPassword: "",
-    },
-  });
-
   // Form submit handlers
   const onLoginSubmit = (values: LoginFormValues) => {
     loginMutation.mutate(values, {
-      onSuccess: () => navigate("/")
-    });
-  };
-
-  const onRegisterSubmit = (values: RegisterFormValues) => {
-    const { confirmPassword, ...registerData } = values;
-    registerMutation.mutate(registerData, {
       onSuccess: () => navigate("/")
     });
   };
@@ -85,16 +59,15 @@ export default function AuthPage() {
             <CardHeader className="space-y-1">
               <CardTitle className="text-2xl font-bold">MCP Server</CardTitle>
               <CardDescription>
-                Sign in to access the Model Context Protocol server
+                Admin Login
               </CardDescription>
             </CardHeader>
             <CardContent>
               <Tabs defaultValue="login" value={activeTab} onValueChange={setActiveTab}>
-                <TabsList className="grid w-full grid-cols-2 mb-4">
-                  <TabsTrigger value="login">Login</TabsTrigger>
-                  <TabsTrigger value="register">Register</TabsTrigger>
+                <TabsList className="grid w-full grid-cols-1">
+                  <TabsTrigger value="login">Admin Login</TabsTrigger>
                 </TabsList>
-                
+
                 <TabsContent value="login">
                   <Form {...loginForm}>
                     <form onSubmit={loginForm.handleSubmit(onLoginSubmit)} className="space-y-4">
@@ -133,68 +106,16 @@ export default function AuthPage() {
                     </form>
                   </Form>
                 </TabsContent>
-                
-                <TabsContent value="register">
-                  <Form {...registerForm}>
-                    <form onSubmit={registerForm.handleSubmit(onRegisterSubmit)} className="space-y-4">
-                      <FormField
-                        control={registerForm.control}
-                        name="username"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Username</FormLabel>
-                            <FormControl>
-                              <Input placeholder="Choose a username" {...field} />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                      <FormField
-                        control={registerForm.control}
-                        name="password"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Password</FormLabel>
-                            <FormControl>
-                              <Input type="password" placeholder="Choose a password" {...field} />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                      <FormField
-                        control={registerForm.control}
-                        name="confirmPassword"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Confirm Password</FormLabel>
-                            <FormControl>
-                              <Input type="password" placeholder="Confirm your password" {...field} />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                      <Button type="submit" className="w-full" disabled={registerMutation.isPending}>
-                        {registerMutation.isPending ? (
-                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        ) : null}
-                        Register
-                      </Button>
-                    </form>
-                  </Form>
-                </TabsContent>
               </Tabs>
             </CardContent>
             <CardFooter>
               <p className="text-center text-sm text-muted-foreground w-full">
-                By signing in, you agree to abide by our terms of service and privacy policy.
+                This server is for admin use only.
               </p>
             </CardFooter>
           </Card>
         </div>
-        
+
         {/* Hero Section */}
         <div className="hidden lg:flex flex-col justify-center text-center lg:text-left space-y-6">
           <h1 className="text-4xl font-bold">Model Context Protocol Server</h1>
