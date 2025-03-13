@@ -2,7 +2,7 @@ import passport from "passport";
 import { Strategy as LocalStrategy } from "passport-local";
 import { Express } from "express";
 import session from "express-session";
-import { scrypt, randomBytes, timingSafeEqual } from "crypto";
+import { scrypt, randomBytes, timingSafeEqual, crypto } from "crypto";
 import { promisify } from "util";
 import { storage } from "./storage";
 import { User as SelectUser, AccessToken } from "@shared/schema";
@@ -49,7 +49,13 @@ async function initializeAdminUser() {
     if (!adminUser) {
       // Create admin user with credentials from Replit Secrets
       const adminUsername = process.env.ADMIN_USERNAME || "admin";
-      const adminPassword = process.env.ADMIN_PASSWORD || "Admin@MCP2023"; 
+      const adminPassword = process.env.ADMIN_PASSWORD; 
+      
+      // Check if password is provided
+      if (!adminPassword) {
+        console.error("No admin password provided in environment variables");
+        return;
+      } 
       
       await storage.createUser({
         username: adminUsername,
@@ -70,7 +76,7 @@ export function setupAuth(app: Express) {
   initializeAdminUser();
   
   const sessionSettings: session.SessionOptions = {
-    secret: process.env.SESSION_SECRET || "mcp-server-secret-key",
+    secret: process.env.SESSION_SECRET || crypto.randomBytes(32).toString('hex'),
     resave: false,
     saveUninitialized: false,
     store: storage.sessionStore,
