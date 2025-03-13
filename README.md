@@ -1,85 +1,62 @@
-
 # MCP Server
 
-A Model Context Protocol (MCP) server implementation that enables Large Language Models (LLMs) to securely access tools and data sources through a standardized API.
+A Model Context Protocol (MCP) server implementation based on the [Model Context Protocol](https://modelcontextprotocol.io/) specification.
 
 ## Overview
 
-This project implements a server that adheres to the [Model Context Protocol](https://modelcontextprotocol.io/) specification, allowing AI models like Claude to interact with tools, access data, and perform actions through a defined API.
+This project implements a basic MCP server that can be used with compatible AI applications. It's primarily designed to be deployed on Replit.
 
 ## Features
 
-- **Authentication System**: Secure user account management with session persistence
-- **API Token Management**: Create and manage access tokens for secure API access
-- **MCP Protocol Support**: Full implementation of the MCP protocol for AI tools
-- **Chat Session Management**: Persistent chat sessions with message history
-- **WebSocket Support**: Real-time communication capabilities
-- **Provider Management**: Integration with various AI providers
+- Authentication system
+- API token management
+- MCP protocol implementation
+- Chat session management
+- WebSocket support
+- Provider integrations
 
-## Getting Started
+## Setup on Replit
 
 ### Prerequisites
 
-- Node.js (v18+)
-- NPM or Yarn
+- A Replit account
+- Replit Core subscription (recommended)
 
 ### Installation
 
-1. Clone the repository
-2. Install dependencies:
+1. Fork/Clone/Remix this project on Replit
+2. The dependencies will automatically install
+3. Configure required environment variables in Replit Secrets:
+   - `JWT_SECRET`: Secret for JWT token generation
+   - `ANTHROPIC_API_KEY`: For Claude API access (if using Anthropic provider)
+   - `OPENAI_API_KEY`: For OpenAI API access (if using OpenAI provider)
 
-```bash
-npm install
-```
+### Running the Server
 
-3. Start the development server:
-
-```bash
-npm run dev
-```
-
-The server will be accessible at http://localhost:5000.
+Press the Run button in Replit to start the server. The server will be accessible at the URL provided by Replit.
 
 ## Usage with Claude Desktop App
 
 To use this MCP server with the Claude Desktop app:
 
-1. **Start the Server**: Ensure your MCP server is running on port 5000
+1. **Start the Server**: Ensure your MCP server is running on Replit
 2. **Create an Access Token**:
-   - Log in to the web interface at http://localhost:5000
+   - Log in to the web interface
    - Navigate to the tokens management section
-   - Create a new token with appropriate permissions (read, execute)
-   - Save the token value (shown only once)
+   - Create a new token with appropriate permissions
 3. **Configure Claude Desktop**:
    - Open Claude Desktop app
    - Go to Settings
    - In the "MCP Servers" section, add a new server with:
-     - Name: Your custom name (e.g., "My MCP Server")
-     - URL: http://localhost:5000/api/mcp
-     - Token: Paste your access token
-4. **Using the Tools**:
-   - In a Claude conversation, type "@" to access available tools
-   - Select a tool from the dropdown and follow the prompts
+     - Name: Your custom name
+     - URL: Your Replit project URL + `/api/mcp`
+     - Token: Your access token
 
-## Development
+## Project Structure
 
-### Project Structure
-
-- `/client`: Frontend React application
-- `/server`: Backend Express server
-  - `/mcp`: MCP protocol implementation
-  - `/auth.ts`: Authentication system
-  - `/routes.ts`: API route definitions
-  - `/tools.ts`: Tool management
-- `/shared`: Shared types and schemas
-
-### Available Scripts
-
-- `npm run dev`: Start development server
-- `npm run build`: Build for production
-- `npm run start`: Start production server
-- `npm run check`: Run TypeScript type checking
-- `npm run db:push`: Update database schema
+- `/client`: Frontend application
+- `/server`: Backend server implementation
+- `/shared`: Shared types and utilities
 
 ## License
 
