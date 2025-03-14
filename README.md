@@ -21,6 +21,7 @@ This project implements a basic MCP server that can be used with compatible AI a
 
 - A Replit account
 - Replit Core subscription (recommended)
+- API Key(s) of AI providers (such as Anthropic API, xAI API, etc)
 
 ### Installation
 
@@ -39,18 +40,28 @@ Press the Run button in Replit to start the server. The server will be accessibl
 
 To use this MCP server with the Claude Desktop app:
 
-1. **Start the Server**: Ensure your MCP server is running on Replit
+1. **Start the Server**: 
+   - Ensure your MCP server is running on Replit
+   - Verify it's accessible at your Replit project URL
+
 2. **Create an Access Token**:
-   - Log in to the web interface
+   - Log in to the web interface at your Replit project URL
    - Navigate to the tokens management section
-   - Create a new token with appropriate permissions
+   - Create a new access token with appropriate permissions (read, execute)
+   - Save the full token value that is displayed (this is only shown once)
+
 3. **Configure Claude Desktop**:
    - Open Claude Desktop app
    - Go to Settings
    - In the "MCP Servers" section, add a new server with:
-     - Name: Your custom name
+     - Name: Your custom name (e.g., "My MCP Server")
      - URL: Your Replit project URL + `/api/mcp`
-     - Token: Your access token
+     - Token: Paste the access token you created in step 2
+
+4. **Using MCP Server Tools**:
+   - In a conversation with Claude, type "@" to access tools offered by your MCP server
+   - The available tools should appear in a dropdown menu
+   - Select a tool and follow the prompts to use it in your conversation
 
 ## Project Structure
 
