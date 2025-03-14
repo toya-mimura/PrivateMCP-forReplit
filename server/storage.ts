@@ -11,6 +11,10 @@ import { Store } from "express-session";
 import createMemoryStore from "memorystore";
 import session from "express-session";
 
+import { MemStorage } from './storage/mem-storage';
+import { PostgresStorage } from './storage/postgres';
+import { IStorage } from './storage/interface';
+
 const MemoryStore = createMemoryStore(session);
 
 // Storage interface
@@ -67,9 +71,9 @@ export class MemStorage implements IStorage {
   private tools: Map<number, Tool>;
   private chatSessions: Map<number, ChatSession>;
   private chatMessages: Map<number, ChatMessage>;
-  
+
   sessionStore: Store;
-  
+
   currentUserId: number;
   currentTokenId: number;
   currentProviderId: number;
@@ -87,7 +91,7 @@ export class MemStorage implements IStorage {
     this.sessionStore = new MemoryStore({
       checkPeriod: 86400000 // 24 hours
     });
-    
+
     this.currentUserId = 1;
     this.currentTokenId = 1;
     this.currentProviderId = 1;
@@ -156,7 +160,7 @@ export class MemStorage implements IStorage {
   async updateToken(id: number, updates: Partial<AccessToken>): Promise<AccessToken | undefined> {
     const token = this.tokens.get(id);
     if (!token) return undefined;
-    
+
     const updatedToken = { ...token, ...updates };
     this.tokens.set(id, updatedToken);
     return updatedToken;
@@ -165,7 +169,7 @@ export class MemStorage implements IStorage {
   async revokeToken(id: number): Promise<boolean> {
     const token = this.tokens.get(id);
     if (!token) return false;
-    
+
     token.revoked = true;
     this.tokens.set(id, token);
     return true;
@@ -203,9 +207,9 @@ export class MemStorage implements IStorage {
   async updateProvider(id: number, updates: Partial<AIProvider>): Promise<AIProvider | undefined> {
     const provider = this.providers.get(id);
     if (!provider) return undefined;
-    
-    const updatedProvider = { 
-      ...provider, 
+
+    const updatedProvider = {
+      ...provider,
       ...updates,
       updatedAt: new Date()
     };
@@ -259,7 +263,7 @@ export class MemStorage implements IStorage {
   async updateTool(id: number, updates: Partial<Tool>): Promise<Tool | undefined> {
     const tool = this.tools.get(id);
     if (!tool) return undefined;
-    
+
     const updatedTool = { ...tool, ...updates };
     this.tools.set(id, updatedTool);
     return updatedTool;
@@ -297,9 +301,9 @@ export class MemStorage implements IStorage {
   async updateChatSession(id: number, updates: Partial<ChatSession>): Promise<ChatSession | undefined> {
     const session = this.chatSessions.get(id);
     if (!session) return undefined;
-    
-    const updatedSession = { 
-      ...session, 
+
+    const updatedSession = {
+      ...session,
       ...updates,
       updatedAt: new Date()
     };
@@ -328,16 +332,34 @@ export class MemStorage implements IStorage {
       toolName: insertMessage.toolName ?? null
     };
     this.chatMessages.set(id, message);
-    
+
     // Update the last updated time of the chat session
     const session = this.chatSessions.get(insertMessage.sessionId);
     if (session) {
       session.updatedAt = now;
       this.chatSessions.set(insertMessage.sessionId, session);
     }
-    
+
     return message;
   }
 }
 
-export const storage = new MemStorage();
+function createStorage(): IStorage {
+  const databaseUrl = process.env.DATABASE_URL;
+
+  if (!databaseUrl) {
+    console.warn('DATABASE_URL not set, using in-memory storage');
+    return new MemStorage();
+  }
+
+  try {
+    console.log('Attempting to initialize PostgreSQL storage...');
+    return new PostgresStorage(databaseUrl);
+  } catch (error) {
+    console.error('Failed to initialize PostgreSQL storage:', error);
+    console.warn('Falling back to in-memory storage');
+    return new MemStorage();
+  }
+}
+
+export const storage = createStorage();

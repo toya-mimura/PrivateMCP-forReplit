@@ -31,8 +31,68 @@ Before running the server, you must configure the following secrets in Replit's 
 **Required in all environments:**
 - `SESSION_SECRET`: A secure random string for session encryption
 - `JWT_SECRET`: A secure random string for JWT token generation
+- `DATABASE_URL`: PostgreSQL connection string (get this from the Database tab in Replit)
+
+**Note:** If `DATABASE_URL` is not set, the server will fall back to in-memory storage (not recommended for production).
 
 **Required in production:**
+
+
+## Database Management
+
+### Setting up PostgreSQL
+
+1. Open the Database tab in Replit
+2. Click "Create Database" to provision a new PostgreSQL database
+3. Copy the connection URL from the Database tab
+4. Add it as `DATABASE_URL` in your project secrets
+
+### Database Setup
+
+1. Go to the "Database" tab in your Replit project
+2. Click "Create Database" to create a new PostgreSQL database
+3. The database connection URL will be automatically added to your project secrets as `DATABASE_URL`
+
+### Running Migrations
+
+The project uses Drizzle ORM for database management. When you make changes to the schema in `shared/schema.ts`, follow these steps:
+
+1. Make your changes to the schema
+2. Run the migration command:
+   ```bash
+   npm run db:push
+   ```
+3. Verify the changes in the Database tab
+
+### Troubleshooting
+
+- If you see "DATABASE_URL not set" in the logs, check that your database was created properly in the Database tab
+- If you encounter connection errors, try:
+  1. Refreshing the Replit environment
+  2. Checking the Database tab to ensure the database is running
+  3. Verifying the DATABASE_URL secret is set correctly
+
+### Database Structure
+
+The database schema includes the following tables:
+- `users`: User accounts and authentication
+- `access_tokens`: API access tokens
+- `ai_providers`: AI provider configurations
+- `tools`: Available MCP tools
+- `chat_sessions`: User chat sessions
+- `chat_messages`: Individual chat messages
+- `sessions`: Express session storage
+
+### Schema Migrations
+
+Schema changes are managed using Drizzle ORM migrations:
+
+1. Make changes to the schema in `shared/schema.ts`
+2. Run `npm run db:push` to apply changes to the database
+3. Review the changes in the Database tab
+
+**Note:** Always backup your data before running migrations in production.
+
 - `ADMIN_USERNAME`: Admin account username
 - `ADMIN_PASSWORD`: Admin account password
 
