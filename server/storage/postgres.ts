@@ -1,8 +1,8 @@
-
 import { drizzle } from 'drizzle-orm/neon-serverless';
 import { neon } from '@neondatabase/serverless';
 import { Store } from 'express-session';
 import PgSimpleStore from 'connect-pg-simple';
+import { eq, and, or, isNull, gt, asc } from 'drizzle-orm/expressions';
 import * as schema from '@shared/schema';
 import { IStorage } from './interface';
 
@@ -11,17 +11,32 @@ export class PostgresStorage implements IStorage {
   sessionStore: Store;
 
   constructor(connectionString: string) {
-    // Configure Neon client
-    const sql = neon(connectionString);
-    this.db = drizzle(sql, { schema });
+    try {
+      console.log('Initializing PostgreSQL storage...');
 
-    // Configure session store
-    const SessionStore = PgSimpleStore(require('express-session'));
-    this.sessionStore = new SessionStore({
-      conString: connectionString,
-      tableName: 'sessions',
-      createTableIfMissing: true,
-    });
+      // Configure Neon client
+      const sql = neon(connectionString);
+      this.db = drizzle(sql, { schema });
+
+      // Configure session store
+      try {
+        const SessionStore = PgSimpleStore(require('express-session'));
+        this.sessionStore = new SessionStore({
+          conString: connectionString,
+          tableName: 'sessions',
+          createTableIfMissing: true,
+        });
+        console.log('Session store configured successfully');
+      } catch (err) {
+        console.error('Failed to initialize session store:', err);
+        throw err;
+      }
+
+      console.log('PostgreSQL storage initialized successfully');
+    } catch (err) {
+      console.error('Failed to initialize PostgreSQL storage:', err);
+      throw err;
+    }
   }
 
   // User methods

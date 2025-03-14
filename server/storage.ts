@@ -11,7 +11,7 @@ import { Store } from "express-session";
 import createMemoryStore from "memorystore";
 import session from "express-session";
 
-import { MemStorage } from './storage/memory';
+import { MemStorage } from './storage/mem-storage';
 import { PostgresStorage } from './storage/postgres';
 import { IStorage } from './storage/interface';
 
@@ -345,14 +345,16 @@ export class MemStorage implements IStorage {
 }
 
 function createStorage(): IStorage {
-  if (!process.env.DATABASE_URL) {
+  const databaseUrl = process.env.DATABASE_URL;
+
+  if (!databaseUrl) {
     console.warn('DATABASE_URL not set, using in-memory storage');
     return new MemStorage();
   }
 
   try {
-    console.log('Initializing PostgreSQL storage...');
-    return new PostgresStorage(process.env.DATABASE_URL);
+    console.log('Attempting to initialize PostgreSQL storage...');
+    return new PostgresStorage(databaseUrl);
   } catch (error) {
     console.error('Failed to initialize PostgreSQL storage:', error);
     console.warn('Falling back to in-memory storage');

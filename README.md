@@ -47,6 +47,31 @@ Before running the server, you must configure the following secrets in Replit's 
 3. Copy the connection URL from the Database tab
 4. Add it as `DATABASE_URL` in your project secrets
 
+### Database Setup
+
+1. Go to the "Database" tab in your Replit project
+2. Click "Create Database" to create a new PostgreSQL database
+3. The database connection URL will be automatically added to your project secrets as `DATABASE_URL`
+
+### Running Migrations
+
+The project uses Drizzle ORM for database management. When you make changes to the schema in `shared/schema.ts`, follow these steps:
+
+1. Make your changes to the schema
+2. Run the migration command:
+   ```bash
+   npm run db:push
+   ```
+3. Verify the changes in the Database tab
+
+### Troubleshooting
+
+- If you see "DATABASE_URL not set" in the logs, check that your database was created properly in the Database tab
+- If you encounter connection errors, try:
+  1. Refreshing the Replit environment
+  2. Checking the Database tab to ensure the database is running
+  3. Verifying the DATABASE_URL secret is set correctly
+
 ### Database Structure
 
 The database schema includes the following tables:
