@@ -43,17 +43,21 @@ export async function validateToken(token: string): Promise<AccessToken | null> 
 // Create admin user on startup if it doesn't exist
 async function initializeAdminUser() {
   try {
+    const username = process.env.NODE_ENV === 'production' 
+      ? process.env.ADMIN_USERNAME!
+      : (process.env.ADMIN_USERNAME || 'admin');
+    
+    const password = process.env.NODE_ENV === 'production'
+      ? process.env.ADMIN_PASSWORD!
+      : (process.env.ADMIN_PASSWORD || 'admin');
+
     // Check if admin user exists
-    const adminUser = await storage.getUserByUsername(process.env.ADMIN_USERNAME || "admin");
+    const adminUser = await storage.getUserByUsername(username);
     
     if (!adminUser) {
-      // Create admin user with credentials from Replit Secrets
-      const adminUsername = process.env.ADMIN_USERNAME || "admin";
-      const adminPassword = process.env.ADMIN_PASSWORD || "Admin@MCP2023"; 
-      
       await storage.createUser({
-        username: adminUsername,
-        password: await hashPassword(adminPassword),
+        username,
+        password: await hashPassword(password),
       });
       
       console.log("Admin user created successfully");
@@ -62,6 +66,7 @@ async function initializeAdminUser() {
     }
   } catch (error) {
     console.error("Failed to initialize admin user:", error);
+    throw new Error("Failed to initialize admin user. Please check your configuration.");
   }
 }
 
@@ -69,8 +74,19 @@ export function setupAuth(app: Express) {
   // Initialize admin user on startup
   initializeAdminUser();
   
+  // Check required environment variables
+  const requiredSecrets = ['SESSION_SECRET', 'JWT_SECRET'];
+  if (process.env.NODE_ENV === 'production') {
+    requiredSecrets.push('ADMIN_USERNAME', 'ADMIN_PASSWORD');
+  }
+
+  const missingSecrets = requiredSecrets.filter(secret => !process.env[secret]);
+  if (missingSecrets.length > 0) {
+    throw new Error(`Missing required secrets: ${missingSecrets.join(', ')}. Please configure these in the Replit Secrets tab.`);
+  }
+
   const sessionSettings: session.SessionOptions = {
-    secret: process.env.SESSION_SECRET || "mcp-server-secret-key",
+    secret: process.env.SESSION_SECRET!,
     resave: false,
     saveUninitialized: false,
     store: storage.sessionStore,

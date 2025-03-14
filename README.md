@@ -1,3 +1,4 @@
+
 # MCP Server
 
 A Model Context Protocol (MCP) server implementation based on the [Model Context Protocol](https://modelcontextprotocol.io/) specification.
@@ -23,14 +24,36 @@ This project implements a basic MCP server that can be used with compatible AI a
 - Replit Core subscription (recommended)
 - API Key(s) of AI providers (such as Anthropic API, xAI API, etc)
 
+### Required Secrets Configuration
+
+Before running the server, you must configure the following secrets in Replit's Secrets tab:
+
+**Required in all environments:**
+- `SESSION_SECRET`: A secure random string for session encryption
+- `JWT_SECRET`: A secure random string for JWT token generation
+
+**Required in production:**
+- `ADMIN_USERNAME`: Admin account username
+- `ADMIN_PASSWORD`: Admin account password
+
+**Optional Provider API Keys:**
+- `ANTHROPIC_API_KEY`: For Claude API access
+- `OPENAI_API_KEY`: For OpenAI API access
+- Add other provider API keys as needed
+
+To configure secrets:
+1. Open your Repl
+2. Go to the "Tools" tab
+3. Select "Secrets"
+4. Click "New Secret" for each required secret
+5. Enter the key name and value
+6. Click "Add Secret"
+
 ### Installation
 
 1. Fork/Clone/Remix this project on Replit
-2. The dependencies will automatically install
-3. Configure required environment variables in Replit Secrets:
-   - `JWT_SECRET`: Secret for JWT token generation
-   - `ANTHROPIC_API_KEY`: For Claude API access (if using Anthropic provider)
-   - `OPENAI_API_KEY`: For OpenAI API access (if using OpenAI provider)
+2. Configure the required secrets as described above
+3. The dependencies will automatically install
 
 ### Running the Server
 
