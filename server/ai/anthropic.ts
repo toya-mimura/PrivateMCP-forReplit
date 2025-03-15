@@ -39,22 +39,42 @@ export async function generateAnthropicChatCompletion(
       throw new Error('Failed to initialize Anthropic client');
     }
 
-    // Convert messages to Anthropic format
-    const formattedMessages = messages.map(msg => {
-      return {
-        role: msg.role,
-        content: msg.content
-      };
-    });
+    // Prepare messages for Claude API
+    // Claude doesn't support 'system' role directly, so we need to convert it
+    let systemMessage = '';
+    const anthropicMessages = [];
     
+    // Extract system message if any
+    for (const msg of messages) {
+      if (msg.role === 'system') {
+        systemMessage = msg.content;
+      } else {
+        anthropicMessages.push({
+          role: msg.role as 'user' | 'assistant',
+          content: msg.content
+        });
+      }
+    }
+    
+    // Create the completion request
     const response = await anthropic.messages.create({
       model,
-      messages: formattedMessages,
+      system: systemMessage,
+      messages: anthropicMessages,
       temperature,
       max_tokens: maxTokens
     });
     
-    return response.content[0]?.text || '';
+    // Extract the text content from the response
+    if (response.content && response.content.length > 0) {
+      for (const contentBlock of response.content) {
+        if (contentBlock.type === 'text') {
+          return contentBlock.text;
+        }
+      }
+    }
+    
+    return '';
   } catch (error) {
     console.error('Error generating Anthropic chat completion:', error);
     throw error;

@@ -167,38 +167,56 @@ export function useChatMessages(sessionId?: number) {
     (a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
   );
   
-  // Send message mutation
+  // Error handling for WebSocket messages
+  useEffect(() => {
+    if (!socket) return;
+    
+    const handleError = (event: MessageEvent) => {
+      try {
+        const data = JSON.parse(event.data);
+        
+        if (data.type === 'error') {
+          toast({
+            title: "Chat Error",
+            description: data.message || "Unknown error occurred",
+            variant: "destructive",
+          });
+        }
+      } catch (e) {
+        console.error("Error parsing WebSocket error message:", e);
+      }
+    };
+    
+    socket.addEventListener('message', handleError);
+    
+    return () => {
+      socket?.removeEventListener('message', handleError);
+    };
+  }, [toast]);
+
+  // Send message via WebSocket
   const sendMessageMutation = useMutation({
     mutationFn: async ({ content, sessionId }: { content: string; sessionId: number }) => {
-      // For a real implementation, this would send via API
-      // For now, we'll simulate it with a local state update
-      
-      const userMessage: ChatMessage = {
-        id: Date.now(),
-        sessionId,
-        role: "user",
-        content,
-        timestamp: new Date().toISOString()
-      };
-      
-      // Add user message to local state
-      setLocalMessages(prev => [...prev, userMessage]);
-      
-      // In a real implementation, we'd send to the API and get a response
-      // For now, we'll simulate an assistant response after a delay
-      setTimeout(() => {
-        const assistantMessage: ChatMessage = {
-          id: Date.now() + 1,
-          sessionId,
-          role: "assistant",
-          content: `This is a simulated response to: "${content}"`,
-          timestamp: new Date().toISOString()
-        };
+      return new Promise<void>((resolve, reject) => {
+        if (!socket || socket.readyState !== WebSocket.OPEN) {
+          reject(new Error("WebSocket connection not open"));
+          return;
+        }
         
-        setLocalMessages(prev => [...prev, assistantMessage]);
-      }, 1000);
-      
-      return userMessage;
+        try {
+          // Send the message via WebSocket
+          socket.send(JSON.stringify({
+            type: 'chat_message',
+            sessionId,
+            content
+          }));
+          
+          // The actual message will be added to the state when we receive it back via WebSocket
+          resolve();
+        } catch (error) {
+          reject(error);
+        }
+      });
     },
     onError: (error: Error) => {
       toast({

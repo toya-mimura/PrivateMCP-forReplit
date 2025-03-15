@@ -4,9 +4,10 @@ import { setupAuth } from "./auth";
 import { setupMCPServer } from "./mcp";
 import { setupProviderRoutes } from "./providers";
 import { setupToolRoutes } from "./tools";
-import { WebSocketServer } from "ws";
+import { WebSocketServer, WebSocket } from "ws";
 import { storage } from "./storage";
 import { randomUUID } from "crypto";
+import { processUserMessage } from "./ai";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Set up authentication routes
@@ -216,17 +217,92 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Set up WebSocket server for real-time communication
   const wss = new WebSocketServer({ server: httpServer, path: '/ws' });
   
+  // Track active WebSocket connections by sessionId for broadcasting
+  const chatSessions = new Map<number, Set<WebSocket>>();
+  
   wss.on('connection', (ws) => {
     console.log('WebSocket client connected');
     
-    ws.on('message', (message) => {
+    // Track which chat sessions this connection is subscribed to
+    const subscribedSessions = new Set<number>();
+    
+    ws.on('message', async (message) => {
       try {
         const data = JSON.parse(message.toString());
         
-        // Handle chat messages and other real-time events
-        if (data.type === 'chat_message') {
-          // Process chat message
-          // For implementation later
+        // Handle subscriptions to chat sessions
+        if (data.type === 'subscribe' && data.chatId) {
+          const sessionId = parseInt(data.chatId);
+          
+          // Add this client to the session subscribers
+          if (!chatSessions.has(sessionId)) {
+            chatSessions.set(sessionId, new Set());
+          }
+          chatSessions.get(sessionId)?.add(ws);
+          subscribedSessions.add(sessionId);
+          
+          console.log(`Client subscribed to chat session ${sessionId}`);
+        }
+        
+        // Handle unsubscriptions from chat sessions
+        else if (data.type === 'unsubscribe' && data.chatId) {
+          const sessionId = parseInt(data.chatId);
+          
+          // Remove this client from the session subscribers
+          chatSessions.get(sessionId)?.delete(ws);
+          subscribedSessions.delete(sessionId);
+          
+          console.log(`Client unsubscribed from chat session ${sessionId}`);
+        }
+        
+        // Handle chat messages
+        else if (data.type === 'chat_message' && data.sessionId && data.content) {
+          const sessionId = parseInt(data.sessionId);
+          const content = data.content.trim();
+          
+          if (!content) {
+            ws.send(JSON.stringify({
+              type: 'error',
+              message: 'Message content cannot be empty'
+            }));
+            return;
+          }
+          
+          try {
+            // Process the message with the appropriate AI provider
+            const { userMessage, aiMessage } = await processUserMessage(sessionId, content);
+            
+            // Broadcast the user message to all clients subscribed to this session
+            const userMessageEvent = {
+              type: 'chat_message',
+              sessionId,
+              message: userMessage
+            };
+            
+            // Broadcast the assistant message to all clients subscribed to this session
+            const aiMessageEvent = {
+              type: 'chat_message',
+              sessionId,
+              message: aiMessage
+            };
+            
+            // Broadcast to all connected clients for this session
+            const subscribers = chatSessions.get(sessionId) || new Set();
+            subscribers.forEach(client => {
+              if (client.readyState === WebSocket.OPEN) {
+                client.send(JSON.stringify(userMessageEvent));
+                client.send(JSON.stringify(aiMessageEvent));
+              }
+            });
+            
+          } catch (error) {
+            console.error('Error processing chat message:', error);
+            // Notify the client about the error
+            ws.send(JSON.stringify({
+              type: 'error',
+              message: `Failed to process message: ${error instanceof Error ? error.message : 'Unknown error'}`
+            }));
+          }
         }
       } catch (error) {
         console.error('WebSocket message error:', error);
@@ -235,6 +311,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
     
     ws.on('close', () => {
       console.log('WebSocket client disconnected');
+      
+      // Clean up subscriptions when the client disconnects
+      subscribedSessions.forEach(sessionId => {
+        chatSessions.get(sessionId)?.delete(ws);
+      });
     });
   });
   

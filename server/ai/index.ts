@@ -42,31 +42,24 @@ export async function generateAIResponse(
         return await generateOpenAIChatCompletion(
           providerId,
           model,
-          messages.map(msg => {
-            if (msg.role === 'tool') {
-              return {
-                role: 'tool',
-                content: msg.content,
-                tool_call_id: msg.name // Use name as tool_call_id for OpenAI
-              };
-            }
-            return msg;
-          }),
+          messages,
           temperature,
           maxTokens
         );
         
       case 'anthropic':
-        // Claude doesn't support tool messages, so we need to convert them
-        const claudeMessages = messages.filter(msg => msg.role !== 'tool').map(msg => ({
-          role: msg.role === 'system' ? 'user' : msg.role, // Claude handles system messages differently
-          content: msg.role === 'system' ? `<system>${msg.content}</system>` : msg.content
-        }));
+        // Convert messages to the format expected by Anthropic
+        const claudeMessages = messages
+          .filter(msg => msg.role !== 'tool')
+          .map(msg => ({
+            role: msg.role === 'system' ? 'user' : (msg.role as 'user' | 'assistant'),
+            content: msg.content
+          }));
         
         return await generateAnthropicChatCompletion(
           providerId,
           model,
-          claudeMessages,
+          claudeMessages as { role: 'user' | 'assistant' | 'system'; content: string }[],
           temperature,
           maxTokens || 1000
         );

@@ -29,7 +29,11 @@ export async function getOpenAIClient(providerId: number): Promise<OpenAI | null
 export async function generateOpenAIChatCompletion(
   providerId: number,
   model: string,
-  messages: ChatCompletionMessageParam[],
+  messages: Array<{
+    role: 'user' | 'assistant' | 'system' | 'tool';
+    content: string;
+    name?: string;
+  }>,
   temperature: number = 0.7,
   maxTokens?: number
 ) {
@@ -40,9 +44,30 @@ export async function generateOpenAIChatCompletion(
       throw new Error('Failed to initialize OpenAI client');
     }
     
+    // Convert our message format to OpenAI's expected format
+    const formattedMessages: ChatCompletionMessageParam[] = messages.map(msg => {
+      // Handle different role types
+      if (msg.role === 'system') {
+        return { role: 'system', content: msg.content };
+      } else if (msg.role === 'user') {
+        return { role: 'user', content: msg.content };
+      } else if (msg.role === 'assistant') {
+        return { role: 'assistant', content: msg.content };
+      } else if (msg.role === 'tool') {
+        return { 
+          role: 'tool', 
+          content: msg.content,
+          tool_call_id: msg.name || 'unknown'
+        };
+      }
+      
+      // Default fallback
+      return { role: 'user', content: msg.content };
+    });
+    
     const completion = await openai.chat.completions.create({
       model,
-      messages,
+      messages: formattedMessages,
       temperature,
       max_tokens: maxTokens,
     });
