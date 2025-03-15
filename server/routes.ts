@@ -228,7 +228,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     
     ws.on('message', async (message) => {
       try {
+        console.log(`WebSocket message received: ${message.toString().substring(0, 100)}...`);
         const data = JSON.parse(message.toString());
+        console.log(`Parsed WebSocket message type: ${data.type}`);
         
         // Handle subscriptions to chat sessions
         if (data.type === 'subscribe' && data.chatId) {
@@ -238,9 +240,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
           if (!chatSessions.has(sessionId)) {
             chatSessions.set(sessionId, new Set());
           }
+          // Make sure to clear any previous subscriptions for this client
+          chatSessions.forEach((clients, id) => {
+            if (id !== sessionId) {
+              clients.delete(ws);
+            }
+          });
+          
           chatSessions.get(sessionId)?.add(ws);
           subscribedSessions.add(sessionId);
           
+          // Log the active subscriptions
+          const activeSubscriptions = Array.from(chatSessions.entries())
+            .map(([id, clients]) => `Session ${id}: ${clients.size} clients`);
+          console.log(`Current active chat sessions: ${activeSubscriptions.join(', ') || 'None'}`);
           console.log(`Client subscribed to chat session ${sessionId}`);
         }
         
@@ -259,6 +272,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         else if (data.type === 'chat_message' && data.sessionId && data.content) {
           const sessionId = parseInt(data.sessionId);
           const content = data.content.trim();
+          console.log(`Received chat message for session ${sessionId}: ${content.substring(0, 50)}...`);
           
           if (!content) {
             ws.send(JSON.stringify({

@@ -20,6 +20,7 @@ export default function ChatInterface() {
   const [selectedProvider, setSelectedProvider] = useState<AIProvider | null>(null);
   const [activeSession, setActiveSession] = useState<ChatSession | null>(null);
   const [availableModels, setAvailableModels] = useState<AIProviderModel[]>([]);
+  const [chatKey, setChatKey] = useState(0); // Key to force remount of chat hook
   
   const chatContainerRef = useRef<HTMLDivElement>(null);
   
@@ -27,8 +28,17 @@ export default function ChatInterface() {
     messages, 
     isLoading: isLoadingMessages, 
     sendMessage, 
-    isSending 
+    isSending,
+    isConnected 
   } = useChatMessages(activeSession?.id);
+  
+  // Log WebSocket connection status
+  useEffect(() => {
+    console.log(`WebSocket connection status: ${isConnected ? 'Connected' : 'Disconnected'}`);
+    if (isConnected && activeSession) {
+      console.log(`Successfully connected to session ${activeSession.id}`);
+    }
+  }, [isConnected, activeSession]);
   
   // Set available models when provider changes
   useEffect(() => {
@@ -94,7 +104,11 @@ export default function ChatInterface() {
         model: selectedModel
       }, {
         onSuccess: (newSession) => {
+          console.log(`Created new session with ID ${newSession.id}`);
           setActiveSession(newSession);
+          
+          // Force WebSocket to reconnect with the new session ID
+          setChatKey(prev => prev + 1);
         }
       });
     }

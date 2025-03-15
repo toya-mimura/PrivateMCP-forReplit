@@ -88,7 +88,7 @@ export function useChatMessages(sessionId?: number) {
     error,
     refetch 
   } = useQuery<ChatWithMessages>({
-    queryKey: sessionId ? [`/api/chats/${sessionId}`] : null,
+    queryKey: sessionId ? [`/api/chats/${sessionId}`] : [],
     enabled: !!sessionId,
     refetchOnWindowFocus: false,
   });
@@ -97,10 +97,12 @@ export function useChatMessages(sessionId?: number) {
   useEffect(() => {
     if (!sessionId) return;
     
-    // Create WebSocket if it doesn't exist
+    // Create WebSocket if it doesn't exist or if it's closed
     if (!socket || socket.readyState !== WebSocket.OPEN) {
       const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
       const wsUrl = `${protocol}//${window.location.host}/ws`;
+      
+      console.log(`Creating new WebSocket connection to ${wsUrl}`);
       socket = new WebSocket(wsUrl);
       
       socket.onopen = () => {
@@ -108,7 +110,8 @@ export function useChatMessages(sessionId?: number) {
         console.log("WebSocket connected");
         
         // Subscribe to the chat session
-        if (sessionId) {
+        if (sessionId && socket) {
+          console.log(`Subscribing to chat session ${sessionId}`);
           socket.send(JSON.stringify({
             type: 'subscribe',
             chatId: sessionId
@@ -120,14 +123,27 @@ export function useChatMessages(sessionId?: number) {
         setIsConnected(false);
         console.log("WebSocket disconnected");
       };
+      
+      socket.onerror = (error) => {
+        console.error("WebSocket error:", error);
+      };
+    } else if (socket.readyState === WebSocket.OPEN && sessionId) {
+      // If socket is already open, ensure we're subscribed to the correct session
+      console.log(`WebSocket already open, subscribing to session ${sessionId}`);
+      socket.send(JSON.stringify({
+        type: 'subscribe',
+        chatId: sessionId
+      }));
     }
     
     // Handle incoming messages
     const handleMessage = (event: MessageEvent) => {
       try {
         const data = JSON.parse(event.data);
+        console.log("Received WebSocket message:", data);
         
         if (data.type === 'chat_message' && data.sessionId === sessionId) {
+          console.log(`Adding new message to session ${sessionId}:`, data.message);
           // Add the message to our local state
           setLocalMessages(prev => [...prev, data.message]);
         }
@@ -136,7 +152,9 @@ export function useChatMessages(sessionId?: number) {
       }
     };
     
-    socket.addEventListener('message', handleMessage);
+    if (socket) {
+      socket.addEventListener('message', handleMessage);
+    }
     
     // Clean up
     return () => {
@@ -145,6 +163,7 @@ export function useChatMessages(sessionId?: number) {
         
         // Unsubscribe from the chat session
         if (sessionId && socket.readyState === WebSocket.OPEN) {
+          console.log(`Unsubscribing from chat session ${sessionId}`);
           socket.send(JSON.stringify({
             type: 'unsubscribe',
             chatId: sessionId
