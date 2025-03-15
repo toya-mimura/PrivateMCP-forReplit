@@ -1,28 +1,36 @@
-import { drizzle } from 'drizzle-orm/neon-serverless';
-import { neon } from '@neondatabase/serverless';
+import { drizzle } from 'drizzle-orm/postgres-js';
+import postgres from 'postgres';
 import { Store } from 'express-session';
-import PgSimpleStore from 'connect-pg-simple';
+import session from 'express-session';
 import { eq, and, or, isNull, gt, asc } from 'drizzle-orm/expressions';
 import * as schema from '@shared/schema';
 import { IStorage } from './interface';
 
+// Import ESM-compatible connect-pg-simple
+import pg from 'pg';
+import connectPgSimple from 'connect-pg-simple';
+
 export class PostgresStorage implements IStorage {
   private db;
   sessionStore: Store;
+  private pgPool;
 
   constructor(connectionString: string) {
     try {
       console.log('Initializing PostgreSQL storage...');
 
-      // Configure Neon client
-      const sql = neon(connectionString);
-      this.db = drizzle(sql, { schema });
+      // Create postgres-js client for Drizzle
+      const client = postgres(connectionString, { max: 10 });
+      this.db = drizzle(client, { schema });
 
-      // Configure session store
+      // Create pg Pool for connect-pg-simple
+      this.pgPool = new pg.Pool({ connectionString });
+
+      // Configure session store using ESM-compatible imports
       try {
-        const SessionStore = PgSimpleStore(require('express-session'));
-        this.sessionStore = new SessionStore({
-          conString: connectionString,
+        const PgStore = connectPgSimple(session);
+        this.sessionStore = new PgStore({
+          pool: this.pgPool,
           tableName: 'sessions',
           createTableIfMissing: true,
         });
