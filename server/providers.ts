@@ -149,6 +149,7 @@ export function setupProviderRoutes(app: Express) {
   app.post("/api/providers/:id/test", ensureAuthenticated, async (req, res) => {
     try {
       const id = parseInt(req.params.id);
+      const { message = "Hello, this is a test message." } = req.body;
       
       // Get provider
       const provider = await storage.getProvider(id);
@@ -156,19 +157,56 @@ export function setupProviderRoutes(app: Express) {
         return res.status(404).json({ message: "Provider not found" });
       }
       
-      // Simple test based on provider type
-      // In a real implementation, this would make a test API call to the provider
+      if (!provider.active) {
+        return res.status(400).json({
+          success: false,
+          message: "Provider is not active"
+        });
+      }
       
-      // Mock successful test response
+      if (!provider.apiKey) {
+        return res.status(400).json({
+          success: false,
+          message: "Provider has no API key configured"
+        });
+      }
+      
+      // Get first available model for this provider
+      const models = getAvailableModels(provider.provider);
+      if (models.length === 0) {
+        return res.status(400).json({
+          success: false,
+          message: "No models available for this provider"
+        });
+      }
+      
+      // Use the first available model
+      const model = models[0].id;
+      
+      // Import the AI module dynamically to avoid circular dependencies
+      const { generateAIResponse } = await import('./ai');
+      
+      // Generate a test response
+      const response = await generateAIResponse(
+        provider.id,
+        model,
+        [
+          { role: 'system', content: 'You are a helpful assistant responding to a test message.' },
+          { role: 'user', content: message }
+        ]
+      );
+      
       res.json({
         success: true,
         message: "Connection test successful",
-        available_models: getAvailableModels(provider.provider)
+        available_models: models,
+        test_response: response
       });
     } catch (error) {
+      console.error("Error testing provider:", error);
       res.status(500).json({ 
         success: false,
-        message: "Connection test failed"
+        message: error instanceof Error ? error.message : "Connection test failed"
       });
     }
   });

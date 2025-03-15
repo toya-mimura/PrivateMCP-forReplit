@@ -3,11 +3,12 @@ import { useProviders } from "@/hooks/use-providers";
 import { useChatSessions, useChatMessages } from "@/hooks/use-chat";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
-import { Plus, ChevronDown } from "lucide-react";
+import { Plus, ChevronDown, Bug } from "lucide-react";
 import { AIProvider, AIProviderModel, ChatSession } from "@/lib/mcp-types";
 import { getAvailableModels } from "@/hooks/use-providers";
 import ChatMessage from "./ChatMessage";
 import ChatInput from "./ChatInput";
+import ChatDebug from "./ChatDebug";
 import { useTools } from "@/hooks/use-tools";
 
 export default function ChatInterface() {
@@ -121,6 +122,7 @@ export default function ChatInterface() {
   
   // Get active tools
   const activeTools = tools?.filter(tool => tool.active) || [];
+  const [showDebug, setShowDebug] = useState(false);
   
   return (
     <div className="flex-1 flex flex-col overflow-hidden pt-16 md:pt-0">
@@ -128,7 +130,17 @@ export default function ChatInterface() {
         {/* Chat Header */}
         <div className="bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 p-4">
           <div className="flex items-center justify-between">
-            <h2 className="text-lg font-semibold">MCP Chat Interface</h2>
+            <div className="flex items-center gap-2">
+              <h2 className="text-lg font-semibold">MCP Chat Interface</h2>
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={() => setShowDebug(!showDebug)}
+                title="Toggle debug panel"
+              >
+                <Bug className="h-4 w-4" />
+              </Button>
+            </div>
             <div className="flex items-center space-x-3">
               <div>
                 <Select 
@@ -215,6 +227,13 @@ export default function ChatInterface() {
             </div>
           )}
         </div>
+        
+        {/* Debug Panel */}
+        {showDebug && (
+          <div className="border-t border-slate-200 dark:border-slate-700">
+            <ChatDebug />
+          </div>
+        )}
         
         {/* Chat Input */}
         <ChatInput 
