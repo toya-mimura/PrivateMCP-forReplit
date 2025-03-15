@@ -29,10 +29,37 @@ export default function ChatDebug() {
           description: "Connection established successfully",
         });
         
-        // Close after 3 seconds
+        // Send a ping message
+        console.log("Sending ping message to WebSocket");
+        socket.send(JSON.stringify({
+          type: 'ping',
+          timestamp: Date.now()
+        }));
+        
+        // Set up message handler
+        socket.onmessage = (event) => {
+          try {
+            console.log("Received WebSocket message:", event.data);
+            
+            const data = JSON.parse(event.data);
+            
+            if (data.type === 'pong') {
+              setResponse(`Received pong response. Round-trip time: ${Date.now() - data.timestamp}ms`);
+              toast({
+                title: "WebSocket Test Success",
+                description: "Received pong response from server",
+              });
+            }
+          } catch (e) {
+            console.error("Error parsing WebSocket test message:", e);
+            setResponse(`Error parsing server response: ${e instanceof Error ? e.message : 'Unknown error'}`);
+          }
+        };
+        
+        // Close after 5 seconds
         setTimeout(() => {
           socket.close();
-        }, 3000);
+        }, 5000);
       };
       
       socket.onclose = () => {

@@ -232,6 +232,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const data = JSON.parse(message.toString());
         console.log(`Parsed WebSocket message type: ${data.type}`);
         
+        // Handle ping messages for debugging
+        if (data.type === 'ping') {
+          console.log('Received ping, sending pong');
+          ws.send(JSON.stringify({
+            type: 'pong',
+            timestamp: data.timestamp,
+            serverTime: Date.now()
+          }));
+          return;
+        }
+        
         // Handle subscriptions to chat sessions
         if (data.type === 'subscribe' && data.chatId) {
           const sessionId = parseInt(data.chatId);

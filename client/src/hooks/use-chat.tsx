@@ -97,8 +97,14 @@ export function useChatMessages(sessionId?: number) {
   useEffect(() => {
     if (!sessionId) return;
     
-    // Create WebSocket if it doesn't exist or if it's closed
-    if (!socket || socket.readyState !== WebSocket.OPEN) {
+    // Function to create and set up a WebSocket connection
+    const setupWebSocket = () => {
+      // Close any existing connection
+      if (socket && socket.readyState === WebSocket.OPEN) {
+        console.log("Closing existing WebSocket connection");
+        socket.close();
+      }
+      
       const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
       const wsUrl = `${protocol}//${window.location.host}/ws`;
       
@@ -116,17 +122,34 @@ export function useChatMessages(sessionId?: number) {
             type: 'subscribe',
             chatId: sessionId
           }));
+          
+          // Send a ping to verify the connection is working
+          socket.send(JSON.stringify({
+            type: 'ping',
+            timestamp: Date.now()
+          }));
         }
       };
       
-      socket.onclose = () => {
+      socket.onclose = (event) => {
         setIsConnected(false);
-        console.log("WebSocket disconnected");
+        console.log(`WebSocket disconnected with code ${event.code}, reason: ${event.reason}`);
+        
+        // Attempt to reconnect after a delay unless it was intentionally closed
+        if (event.code !== 1000) {
+          console.log("Attempting to reconnect in 3 seconds...");
+          setTimeout(setupWebSocket, 3000);
+        }
       };
       
       socket.onerror = (error) => {
         console.error("WebSocket error:", error);
       };
+    };
+    
+    // Create WebSocket if it doesn't exist or if it's closed
+    if (!socket || socket.readyState !== WebSocket.OPEN) {
+      setupWebSocket();
     } else if (socket.readyState === WebSocket.OPEN && sessionId) {
       // If socket is already open, ensure we're subscribed to the correct session
       console.log(`WebSocket already open, subscribing to session ${sessionId}`);
@@ -206,11 +229,15 @@ export function useChatMessages(sessionId?: number) {
       }
     };
     
-    socket.addEventListener('message', handleError);
+    if (socket) {
+      socket.addEventListener('message', handleError);
+      
+      return () => {
+        socket?.removeEventListener('message', handleError);
+      };
+    }
     
-    return () => {
-      socket?.removeEventListener('message', handleError);
-    };
+    return undefined;
   }, [toast]);
 
   // Send message via WebSocket
@@ -218,11 +245,57 @@ export function useChatMessages(sessionId?: number) {
     mutationFn: async ({ content, sessionId }: { content: string; sessionId: number }) => {
       return new Promise<void>((resolve, reject) => {
         if (!socket || socket.readyState !== WebSocket.OPEN) {
-          reject(new Error("WebSocket connection not open"));
+          console.log("WebSocket not open, creating new connection...");
+          
+          // Create a new WebSocket connection
+          const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+          const wsUrl = `${protocol}//${window.location.host}/ws`;
+          socket = new WebSocket(wsUrl);
+          
+          socket.onopen = () => {
+            console.log("WebSocket opened, subscribing to session");
+            setIsConnected(true);
+            
+            if (socket) {
+              // Subscribe to the session
+              socket.send(JSON.stringify({
+                type: 'subscribe',
+                chatId: sessionId
+              }));
+              
+              // Now send the message
+              setTimeout(() => {
+                try {
+                  if (socket) {
+                    socket.send(JSON.stringify({
+                      type: 'chat_message',
+                      sessionId,
+                      content
+                    }));
+                    resolve();
+                  } else {
+                    reject(new Error("WebSocket connection lost"));
+                  }
+                } catch (error) {
+                  reject(error);
+                }
+              }, 500);
+            } else {
+              reject(new Error("WebSocket connection lost"));
+            }
+          };
+          
+          socket.onerror = (event) => {
+            console.error("WebSocket error during send:", event);
+            reject(new Error("Failed to connect to WebSocket server"));
+          };
+          
           return;
         }
         
         try {
+          console.log(`Sending message to session ${sessionId} via WebSocket`);
+          
           // Send the message via WebSocket
           socket.send(JSON.stringify({
             type: 'chat_message',
@@ -233,6 +306,7 @@ export function useChatMessages(sessionId?: number) {
           // The actual message will be added to the state when we receive it back via WebSocket
           resolve();
         } catch (error) {
+          console.error("Error sending message:", error);
           reject(error);
         }
       });
