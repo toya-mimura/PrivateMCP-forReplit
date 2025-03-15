@@ -56,6 +56,8 @@ export async function generateAnthropicChatCompletion(
       }
     }
     
+    console.log(`Sending request to Anthropic with model ${model}`);
+    
     // Create the completion request
     const response = await anthropic.messages.create({
       model,
@@ -69,11 +71,14 @@ export async function generateAnthropicChatCompletion(
     if (response.content && response.content.length > 0) {
       for (const contentBlock of response.content) {
         if (contentBlock.type === 'text') {
-          return contentBlock.text;
+          const textResponse = contentBlock.text;
+          console.log(`Received response from Anthropic (${textResponse.length} chars): ${textResponse.substring(0, 50)}...`);
+          return textResponse;
         }
       }
     }
     
+    console.log('No text content found in Anthropic response');
     return '';
   } catch (error) {
     console.error('Error generating Anthropic chat completion:', error);

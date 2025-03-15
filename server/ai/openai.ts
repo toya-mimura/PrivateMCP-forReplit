@@ -65,6 +65,8 @@ export async function generateOpenAIChatCompletion(
       return { role: 'user', content: msg.content };
     });
     
+    console.log(`Sending request to OpenAI with model ${model}`);
+    
     const completion = await openai.chat.completions.create({
       model,
       messages: formattedMessages,
@@ -72,7 +74,10 @@ export async function generateOpenAIChatCompletion(
       max_tokens: maxTokens,
     });
     
-    return completion.choices[0]?.message.content || '';
+    const response = completion.choices[0]?.message.content || '';
+    console.log(`Received response from OpenAI (${response.length} chars): ${response.substring(0, 50)}...`);
+    
+    return response;
   } catch (error) {
     console.error('Error generating OpenAI chat completion:', error);
     throw error;

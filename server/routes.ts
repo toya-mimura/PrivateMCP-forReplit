@@ -269,8 +269,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
           }
           
           try {
+            console.log(`Processing message for session ${sessionId}: ${content.substring(0, 50)}...`);
+            
             // Process the message with the appropriate AI provider
             const { userMessage, aiMessage } = await processUserMessage(sessionId, content);
+            
+            console.log(`AI response received: ${aiMessage.content.substring(0, 50)}...`);
             
             // Broadcast the user message to all clients subscribed to this session
             const userMessageEvent = {
@@ -288,10 +292,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
             
             // Broadcast to all connected clients for this session
             const subscribers = chatSessions.get(sessionId) || new Set();
+            console.log(`Broadcasting to ${subscribers.size} subscribers for session ${sessionId}`);
+            
             subscribers.forEach(client => {
               if (client.readyState === WebSocket.OPEN) {
+                console.log(`Sending user and AI messages to client`);
                 client.send(JSON.stringify(userMessageEvent));
                 client.send(JSON.stringify(aiMessageEvent));
+              } else {
+                console.log(`Client WebSocket not open, state: ${client.readyState}`);
               }
             });
             
